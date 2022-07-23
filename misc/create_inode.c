@@ -42,6 +42,207 @@
 #include "create_inode.h"
 #include "support/nls-enable.h"
 
+
+static const char *(*dl_archive_entry_hardlink)(struct archive_entry *);
+static const char *(*dl_archive_entry_pathname)(struct archive_entry *);
+static const struct stat *(*dl_archive_entry_stat)(struct archive_entry *);
+static const char *(*dl_archive_entry_symlink)(struct archive_entry *);
+static int (*dl_archive_entry_xattr_count)(struct archive_entry *);
+static int (*dl_archive_entry_xattr_next)(struct archive_entry *, const char **, const void **, size_t *);
+static int (*dl_archive_entry_xattr_reset)(struct archive_entry *);
+static const char *(*dl_archive_error_string)(struct archive *);
+static int (*dl_archive_read_close)(struct archive *);
+static la_ssize_t (*dl_archive_read_data)(struct archive *, void *, size_t);
+static int (*dl_archive_read_free)(struct archive *);
+static struct archive *(*dl_archive_read_new)(void);
+static int (*dl_archive_read_next_header)(struct archive *, struct archive_entry **);
+static int (*dl_archive_read_open_filename)(struct archive *, const char *filename, size_t);
+static int (*dl_archive_read_support_filter_all)(struct archive *);
+static int (*dl_archive_read_support_format_all)(struct archive *);
+
+static int64_t (*dl_archive_entry_size)(struct archive_entry *);
+static mode_t (*dl_archive_entry_mode)(struct archive_entry *);
+static int (*dl_archive_read_data_block)(struct archive *, const void **, size_t *, off_t *);
+static int (*dl_archive_errno)(struct archive *);
+static mode_t (*dl_archive_entry_filetype)(struct archive_entry *);
+static dev_t (*dl_archive_entry_rdev)(struct archive_entry *);
+
+#ifdef HAVE_DLOPEN
+#include <dlfcn.h>
+
+static void *libarchive_handle;
+
+static int libarchive_available(void) {
+	if (!libarchive_handle) {
+		libarchive_handle = dlopen("libarchive.so.13", RTLD_NOW);
+		if (!libarchive_handle)
+			return 0;
+
+		dl_archive_entry_hardlink =
+			(const char *(*)(struct archive_entry *))
+			dlsym(libarchive_handle, "archive_entry_hardlink");
+		if (!dl_archive_entry_hardlink) {
+			return 0;
+		}
+		dl_archive_entry_pathname =
+			(const char *(*)(struct archive_entry *))
+			dlsym(libarchive_handle, "archive_entry_pathname");
+		if (!dl_archive_entry_pathname) {
+			return 0;
+		}
+		dl_archive_entry_stat =
+			(const struct stat *(*)(struct archive_entry *))
+			dlsym(libarchive_handle, "archive_entry_stat");
+		if (!dl_archive_entry_stat) {
+			return 0;
+		}
+		dl_archive_entry_symlink =
+			(const char *(*)(struct archive_entry *))
+			dlsym(libarchive_handle, "archive_entry_symlink");
+		if (!dl_archive_entry_symlink) {
+			return 0;
+		}
+		dl_archive_entry_xattr_count =
+			(int (*)(struct archive_entry *))
+			dlsym(libarchive_handle, "archive_entry_xattr_count");
+		if (!dl_archive_entry_xattr_count) {
+			return 0;
+		}
+		dl_archive_entry_xattr_next =
+			(int (*)(struct archive_entry *, const char **, const void **, size_t *))
+			dlsym(libarchive_handle, "archive_entry_xattr_next");
+		if (!dl_archive_entry_xattr_next) {
+			return 0;
+		}
+		dl_archive_entry_xattr_reset =
+			(int (*)(struct archive_entry *))
+			dlsym(libarchive_handle, "archive_entry_xattr_reset");
+		if (!dl_archive_entry_xattr_reset) {
+			return 0;
+		}
+		dl_archive_error_string =
+			(const char *(*)(struct archive *))
+			dlsym(libarchive_handle, "archive_error_string");
+		if (!dl_archive_error_string) {
+			return 0;
+		}
+		dl_archive_read_close =
+			(int (*)(struct archive *))
+			dlsym(libarchive_handle, "archive_read_close");
+		if (!dl_archive_read_close) {
+			return 0;
+		}
+		dl_archive_read_data =
+			(la_ssize_t (*)(struct archive *, void *, size_t))
+			dlsym(libarchive_handle, "archive_read_data");
+		if (!dl_archive_read_data) {
+			return 0;
+		}
+		dl_archive_read_free =
+			(int (*)(struct archive *))
+			dlsym(libarchive_handle, "archive_read_free");
+		if (!dl_archive_read_free) {
+			return 0;
+		}
+		dl_archive_read_new =
+			(struct archive *(*)(void))
+			dlsym(libarchive_handle, "archive_read_new");
+		if (!dl_archive_read_new) {
+			return 0;
+		}
+		dl_archive_read_next_header =
+			(int (*)(struct archive *, struct archive_entry **))
+			dlsym(libarchive_handle, "archive_read_next_header");
+		if (!dl_archive_read_next_header) {
+			return 0;
+		}
+		dl_archive_read_open_filename =
+			(int (*)(struct archive *, const char *filename, size_t))
+			dlsym(libarchive_handle, "archive_read_open_filename");
+		if (!dl_archive_read_open_filename) {
+			return 0;
+		}
+		dl_archive_read_support_filter_all =
+			(int (*)(struct archive *))
+			dlsym(libarchive_handle, "archive_read_support_filter_all");
+		if (!dl_archive_read_support_filter_all) {
+			return 0;
+		}
+		dl_archive_read_support_format_all =
+			(int (*)(struct archive *))
+			dlsym(libarchive_handle, "archive_read_support_format_all");
+		if (!dl_archive_read_support_format_all) {
+			return 0;
+		}
+		dl_archive_entry_size =
+			(int64_t (*)(struct archive_entry *))
+			dlsym(libarchive_handle, "archive_entry_size");
+		if (!dl_archive_entry_size) {
+			return 0;
+		}
+		dl_archive_entry_mode =
+			(mode_t (*)(struct archive_entry *))
+			dlsym(libarchive_handle, "archive_entry_mode");
+		if (!dl_archive_entry_mode) {
+			return 0;
+		}
+		dl_archive_read_data_block =
+			(int (*)(struct archive *, const void **, size_t *, off_t *))
+			dlsym(libarchive_handle, "archive_read_data_block");
+		if (!dl_archive_read_data_block) {
+			return 0;
+		}
+		dl_archive_errno =
+			(int (*)(struct archive *))
+			dlsym(libarchive_handle, "archive_errno");
+		if (!dl_archive_errno) {
+			return 0;
+		}
+		dl_archive_entry_filetype =
+			(mode_t (*)(struct archive_entry *))
+			dlsym(libarchive_handle, "archive_entry_filetype");
+		if (!dl_archive_entry_filetype) {
+			return 0;
+		}
+		dl_archive_entry_rdev =
+			(dev_t (*)(struct archive_entry *))
+			dlsym(libarchive_handle, "archive_entry_rdev");
+		if (!dl_archive_entry_rdev) {
+			return 0;
+		}
+	}
+
+	return 1;
+}
+#elif
+static int libarchive_available(void) {
+	dl_archive_entry_hardlink = archive_entry_hardlink;
+	dl_archive_entry_pathname = archive_entry_pathname;
+	dl_archive_entry_stat = archive_entry_stat;
+	dl_archive_entry_symlink = archive_entry_symlink;
+	dl_archive_entry_xattr_count = archive_entry_xattr_count;
+	dl_archive_entry_xattr_next = archive_entry_xattr_next;
+	dl_archive_entry_xattr_reset = archive_entry_xattr_reset;
+	dl_archive_error_string = archive_error_string;
+	dl_archive_read_close = archive_read_close;
+	dl_archive_read_data = archive_read_data;
+	dl_archive_read_free = archive_read_free;
+	dl_archive_read_new = archive_read_new;
+	dl_archive_read_next_header = archive_read_next_header;
+	dl_archive_read_open_filename = archive_read_open_filename;
+	dl_archive_read_support_filter_all = archive_read_support_filter_all;
+	dl_archive_read_support_format_all = archive_read_support_format_all;
+	dl_archive_entry_size = archive_entry_size;
+	dl_archive_entry_mode = archive_entry_mode;
+	dl_archive_read_data_block = archive_read_data_block;
+	dl_archive_errno = archive_errno;
+	dl_archive_entry_filetype = archive_entry_filetype;
+	dl_archive_entry_rdev = archive_entry_rdev;
+
+	return 1;
+}
+#endif
+
 /* 64KiB is the minimum blksize to best minimize system call overhead. */
 #define COPY_FILE_BUFLEN	65536
 
@@ -271,13 +472,13 @@ static errcode_t set_inode_xattr_archive(ext2_filsys fs, ext2_ino_t ino,
 		goto out;
 	}
 
-	archive_entry_xattr_reset(entry);
+	dl_archive_entry_xattr_reset(entry);
 	for (;;) {
 		const char *name;
 		const void *value;
 		size_t value_size;
 
-		retval = archive_entry_xattr_next(entry, &name, &value, &value_size);
+		retval = dl_archive_entry_xattr_next(entry, &name, &value, &value_size);
 		if (retval == ARCHIVE_WARN) {
 			retval = 0;
 			break;
@@ -798,8 +999,8 @@ errcode_t do_write_internal_archive(ext2_filsys fs, ext2_ino_t cwd, struct archi
 	ext2_ino_t	newfile;
 	off_t		off;
 
-	retval = __do_write_internal(fs, cwd, archive_entry_size(entry),
-			archive_entry_mode(entry), dest, root, &newfile);
+	retval = __do_write_internal(fs, cwd, dl_archive_entry_size(entry),
+			dl_archive_entry_mode(entry), dest, root, &newfile);
 	if (retval)
 		return retval;
 
@@ -816,13 +1017,13 @@ errcode_t do_write_internal_archive(ext2_filsys fs, ext2_ino_t cwd, struct archi
 		goto out;
 
 	off = 0;
-	while (off < archive_entry_size(entry)) {
+	while (off < dl_archive_entry_size(entry)) {
 		const void *buf;
 		size_t len;
 
-		retval = archive_read_data_block(a, &buf, &len, &off);
+		retval = dl_archive_read_data_block(a, &buf, &len, &off);
 		if (retval) {
-			retval = archive_errno(a);
+			retval = dl_archive_errno(a);
 			goto out;
 		}
 		while (len) {
@@ -836,7 +1037,7 @@ errcode_t do_write_internal_archive(ext2_filsys fs, ext2_ino_t cwd, struct archi
 			else
 				block_len = len;
 
-			end = off + block_len == archive_entry_size(entry);
+			end = off + block_len == dl_archive_entry_size(entry);
 
 			if (block_offset || (block_len != fs->blocksize && !end))
 				memcpy(blockbuf + block_offset, buf, block_len);
@@ -1307,22 +1508,27 @@ errcode_t populate_fs_archive(ext2_filsys fs, ext2_ino_t parent_ino,
 	char		*cwd_last_name;
 	ext2_ino_t	cwd_last_ino;
 
+	if (!libarchive_available()) {
+		com_err(__func__, 0, "Need libarchive for tar support");
+		return 1;
+	}
+
 	if (!(fs->flags & EXT2_FLAG_RW)) {
 		com_err(__func__, 0, "Filesystem opened readonly");
 		return EROFS;
 	}
 
-	a = archive_read_new();
-	archive_read_support_filter_all(a);
-	archive_read_support_format_all(a);
+	a = dl_archive_read_new();
+	dl_archive_read_support_filter_all(a);
+	dl_archive_read_support_format_all(a);
 	if (!strcmp(archive_file, "-"))
-		retval = archive_read_open_filename(a, NULL, 10240);
+		retval = dl_archive_read_open_filename(a, NULL, 10240);
 	else
-		retval = archive_read_open_filename(a, archive_file, 10240);
+		retval = dl_archive_read_open_filename(a, archive_file, 10240);
 	if (retval != ARCHIVE_OK) {
-		retval = archive_errno(a);
-		com_err(__func__, 0, "Failed to open archive %s: %s", archive_file, archive_error_string(a));
-		archive_read_free(a);
+		retval = dl_archive_errno(a);
+		com_err(__func__, 0, "Failed to open archive %s: %s", archive_file, dl_archive_error_string(a));
+		dl_archive_read_free(a);
 		return retval;
 	} else
 		retval = 0;
@@ -1334,20 +1540,20 @@ errcode_t populate_fs_archive(ext2_filsys fs, ext2_ino_t parent_ino,
 		const char *cp;
 		const char *basename;
 
-		retval = archive_read_next_header(a, &entry);
+		retval = dl_archive_read_next_header(a, &entry);
 		if (retval == ARCHIVE_EOF) {
 			retval = 0;
 			break;
 		} else if (retval == ARCHIVE_OK) {
 			retval = 0;
 		} else {
-			retval = archive_errno(a);
+			retval = dl_archive_errno(a);
 			com_err(__func__, 0, "while extracting from %s: %s",
-					archive_file, archive_error_string(a));
+					archive_file, dl_archive_error_string(a));
 			break;
 		}
 
-		s = archive_entry_pathname(entry);
+		s = dl_archive_entry_pathname(entry);
 		free(name);
 		name = cleanup_path(s);
 
@@ -1368,24 +1574,24 @@ errcode_t populate_fs_archive(ext2_filsys fs, ext2_ino_t parent_ino,
 			cwd_last_name = strndup(name, cp - name);
 			retval = ext2fs_namei(fs, root, parent_ino, cwd_last_name, &cwd_last_ino);
 			if (retval != 0) {
-				retval = archive_errno(a);
+				retval = dl_archive_errno(a);
 				com_err(__func__, 0, "Parent directory for %s, %s: %s",
-						name, cwd_last_name,  archive_error_string(a));
+						name, cwd_last_name,  dl_archive_error_string(a));
 				goto out;
 			}
 		}
 
 		basename = cp ? cp + 1 : name;
 
-		s = archive_entry_hardlink(entry);
+		s = dl_archive_entry_hardlink(entry);
 		if (s) {
 			linkname = cleanup_path(s);
 			retval = ext2fs_namei(fs, root, parent_ino, linkname, &ino);
 			free(linkname);
 			if (retval != ARCHIVE_OK) {
-				retval = archive_errno(a);
+				retval = dl_archive_errno(a);
 				com_err(__func__, 0, "while linking %s: %s",
-						name, archive_error_string(a));
+						name, dl_archive_error_string(a));
 				goto out;
 			}
 			retval = add_link(fs, cwd_last_ino, ino, basename);
@@ -1397,14 +1603,14 @@ errcode_t populate_fs_archive(ext2_filsys fs, ext2_ino_t parent_ino,
 			continue;
 		}
 
-		switch(archive_entry_filetype(entry) & AE_IFMT) {
+		switch(dl_archive_entry_filetype(entry) & AE_IFMT) {
 		case AE_IFCHR:
 		case AE_IFBLK:
 		case AE_IFIFO:
 		case AE_IFSOCK:
 			retval = do_mknod_internal(fs, cwd_last_ino, basename,
-						   archive_entry_mode(entry),
-						   archive_entry_rdev(entry));
+						   dl_archive_entry_mode(entry),
+						   dl_archive_entry_rdev(entry));
 			if (retval) {
 				com_err(__func__, retval,
 					_("while creating special file "
@@ -1414,7 +1620,7 @@ errcode_t populate_fs_archive(ext2_filsys fs, ext2_ino_t parent_ino,
 			break;
 		case AE_IFLNK:
 			retval = do_symlink_internal(fs, cwd_last_ino, basename,
-						     archive_entry_symlink(entry), root);
+						     dl_archive_entry_symlink(entry), root);
 			if (retval) {
 				com_err(__func__, retval,
 					_("while writing symlink\"%s\""),
@@ -1453,7 +1659,7 @@ errcode_t populate_fs_archive(ext2_filsys fs, ext2_ino_t parent_ino,
 		}
 
 is_root_ino:
-		retval = set_inode_extra(fs, ino, archive_entry_stat(entry));
+		retval = set_inode_extra(fs, ino, dl_archive_entry_stat(entry));
 		if (retval) {
 			com_err(__func__, retval,
 				_("while setting inode for \"%s\""), name);
@@ -1472,10 +1678,10 @@ out:
 	free(cwd_last_name);
 	free(name);
 	if (retval == 0)
-		archive_read_free(a);
+		dl_archive_read_free(a);
 	else {
-		retval = archive_read_free(a);
-		retval = retval == ARCHIVE_OK ? 0 : archive_errno(a);
+		retval = dl_archive_read_free(a);
+		retval = retval == ARCHIVE_OK ? 0 : dl_archive_errno(a);
 	}
 	return retval;
 }

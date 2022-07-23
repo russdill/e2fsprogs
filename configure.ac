@@ -589,10 +589,11 @@ AC_SUBST(BLKID_CMT)
 dnl
 dnl
 dnl
-PKG_CHECK_MODULES([ARCHIVE], [libarchive], HAVE_ARCHIVE=yes, HAVE_ARCHIVE=no)
-AC_SUBST(ARCHIVE_LIBS)
-AC_SUBST(ARCHIVE_CFLAGS)
-AC_SUBST(HAVE_ARCHIVE)
+AC_CHECK_LIB(archive, archive_read_new, [ARCHIVE_LIB=-larchive  AC_CHECK_HEADERS([archive.h])])
+if test "$ac_cv_func_dlopen" = yes ; then
+	ARCHIVE_LIB=$DLOPEN_LIB
+fi
+AC_SUBST(ARCHIVE_LIB)
 dnl
 dnl handle --enable-subset
 dnl

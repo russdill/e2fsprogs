@@ -1,0 +1,50 @@
+# vim: filetype=sh
+
+test_description="create fs image from GNU tarball"
+if ! test -x $DEBUGFS_EXE; then
+	echo "$test_name: $test_description: skipped (no debugfs)"
+	return 0
+fi
+
+MKFS_TAR=$TMPFILE.tar
+OUT=$test_name.log
+EXP=$test_dir/expect
+
+tar --sort=name -C $SRCDIR --format=gnu -cf $MKFS_TAR progs
+$MKE2FS -q -F -o Linux -T ext4 -O metadata_csum,64bit -E lazy_itable_init=1 -b 1024 -a $MKFS_TAR $TMPFILE 16384 > $OUT 2>&1
+
+$DUMPE2FS $TMPFILE >> $OUT 2>&1
+cat > $TMPFILE.cmd << ENDL
+stat /progs/test_rel.c
+ENDL
+$DEBUGFS -f $TMPFILE.cmd $TMPFILE 2>&1 | egrep -v "(time|checksum):" >> $OUT
+
+$DEBUGFS -R "dump /progs/test_rel.c $TMPFILE.test_rel.c" $TMPFILE 2>&1 >> $OUT
+
+# extract the files and directories from the image and tar them again to make
+# sure that a tarball from the image contents is bit-by-bit identical to the
+# tarball the image was created from -- essentially this checks whether a
+# roundtrip from tar to ext4 to tar remains identical
+mkdir -p "$TMPFILE.dir"
+$DEBUGFS -R "rdump /progs $TMPFILE.dir" $TMPFILE >> $OUT 2>&1
+tar --sort=name -C $TMPFILE.dir --format=gnu -cvf $TMPFILE.new.tar progs >> $OUT 2>&1
+
+$FSCK -f -n $TMPFILE >> $OUT 2>&1
+
+sed -f $cmd_dir/filter.sed -f $test_dir/output.sed -e "s;$TMPFILE;test.img;" < $OUT > $OUT.tmp
+mv $OUT.tmp $OUT
+
+# Do the verification
+cmp -s $OUT $EXP && cmp -s progs/test_rel.c $TMPFILE.test_rel.c && cmp $MKFS_TAR $TMPFILE.new.tar
+status=$?
+
+if [ "$status" = 0 ] ; then
+	echo "$test_name: $test_description: ok"
+	touch $test_name.ok
+else
+        echo "$test_name: $test_description: failed"
+        diff $DIFF_OPTS $EXP $OUT > $test_name.failed
+fi
+
+rm -rf $TMPFILE.cmd $MKFS_TAR $TMPFILE.test_rel.c $TMPFILE.dir $TMPFILE.new.tar
+unset MKFS_TAR OUT EXP
